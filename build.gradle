@@ -1,0 +1,48 @@
+plugins {
+    id "base"
+    id "java"
+    id "application"
+    id "com.palantir.graal" version "0.6.0"
+}
+
+ext {
+    javaMainClass = "demo.Application"
+    graalVmVersion = "19.2.0"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    implementation "org.tinylog:tinylog-api:2.1.1"
+    implementation "org.tinylog:tinylog-impl:2.1.1"
+}
+
+graal {
+    mainClass javaMainClass
+    graalVersion graalVmVersion
+    outputName "demo"
+    option("--allow-incomplete-classpath")
+}
+
+application {
+    mainClassName = javaMainClass
+}
+
+task generateConfiguration(type: Exec) {
+    group = "graal"
+    description = "Run application to generate the configuration for native image generation"
+    dependsOn jar, extractGraalTooling
+    commandLine project.gradle.gradleUserHomeDir.toPath().resolve("caches/com.palantir.graal/$graalVmVersion/graalvm-ce-$graalVmVersion/bin/java"), "-agentlib:native-image-agent=config-output-dir=" + project.buildDir.toPath().resolve("resources/main/META-INF/native-image"), "-cp", sourceSets.main.runtimeClasspath.getAsPath(), javaMainClass
+
+    doFirst {
+        mkdir project.buildDir.toPath().resolve("resources/main/META-INF/native-image")
+    }
+}
